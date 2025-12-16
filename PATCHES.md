@@ -21,6 +21,8 @@ The upstream PyMesh repository has not been updated since 2020 and uses outdated
 | Build | Add `DYLD_LIBRARY_PATH` | macOS delocate finds third_party libs |
 | Build | Use Ninja + parallel | Faster CI builds |
 | Build | TBB static (not shared) | Avoid delocate dependency issues |
+| Build | TBB cache marker fix | Check for library file, not just header |
+| Build | Windows shebang fix | Use sys.executable for portability |
 | Cork | Fallback M_PI define | MinGW ignores _USE_MATH_DEFINES |
 | Python | Remove Tester | numpy 1.25+ compatibility |
 
@@ -89,6 +91,14 @@ Cork is now vendored directly instead of being a git submodule. This allows appl
 #### `third_party/build.py` and `setup.py`
 - **Change**: Add `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`
 - **Reason**: Modern CMake (3.27+) requires explicit minimum policy version for old CMakeLists.txt files
+
+#### `third_party/build.py` - Cache Markers
+- **Change**: TBB cache marker changed from `include/tbb/tbb.h` to `lib/libtbb.a`
+- **Reason**: Previous marker only checked for headers, causing false cache hits when TBB library build failed but headers were installed
+
+#### `setup.py` - Windows Compatibility
+- **Change**: Use `sys.executable` to call `third_party/build.py` instead of relying on shebang
+- **Reason**: Windows doesn't recognize Unix shebangs (`#!/usr/bin/env python`), causing WinError 193
 
 #### CI Workflow (`.github/workflows/build-wheels.yml`)
 - **Change**: Add `CFLAGS=-fcommon CXXFLAGS=-fcommon`

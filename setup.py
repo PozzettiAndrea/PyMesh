@@ -58,22 +58,13 @@ class cmake_build(build):
         """
         Config and build third party dependencies.
         """
-        commands = [
-                "third_party/build.py cgal",
-                "third_party/build.py eigen",
-                "third_party/build.py triangle",
-                "third_party/build.py tetgen",
-                "third_party/build.py clipper",
-                "third_party/build.py qhull",
-                "third_party/build.py cork",
-                #"third_party/build.py carve",
-                "third_party/build.py draco",
-                "third_party/build.py tbb",
-                "third_party/build.py mmg",
-                "third_party/build.py json",
-                ];
-        for c in commands:
-            check_call(c.split())
+        import sys
+        packages = ["cgal", "eigen", "triangle", "tetgen", "clipper",
+                    "qhull", "cork", "draco", "tbb", "mmg", "json"]
+        for pkg in packages:
+            # Use sys.executable to ensure we call the correct Python interpreter
+            # This fixes Windows where shebangs don't work
+            check_call([sys.executable, "third_party/build.py", pkg])
 
     def build_pymesh(self):
         """

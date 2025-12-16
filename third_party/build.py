@@ -50,7 +50,7 @@ def is_already_built(libname):
         "qhull": "include/libqhull_r/qhull_ra.h",
         "clipper": "lib/libpolyclipping.a",
         "draco": "include/draco/core/draco_version.h",
-        "tbb": "include/tbb/tbb.h",
+        "tbb": "lib/libtbb.a",  # Check for library, not just header
         "mmg": "include/mmg/mmg3d/libmmg3d.h",
         "json": "include/nlohmann/json.hpp",
     }

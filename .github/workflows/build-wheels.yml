@@ -43,10 +43,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: python/pymesh/third_party
-          key: third-party-${{ runner.os }}-${{ hashFiles('third_party/build.py', 'third_party/**/CMakeLists.txt') }}
+          # v2: Fixed TBB cache marker to check for library, not just header
+          key: third-party-v2-${{ runner.os }}-${{ hashFiles('third_party/build.py', 'third_party/**/CMakeLists.txt') }}
           restore-keys: |
-            third-party-${{ runner.os }}-
-          save-always: true  # Save cache even if build fails
+            third-party-v2-${{ runner.os }}-
 
       # Windows vcpkg cache
       - name: Restore vcpkg cache
@@ -109,12 +109,9 @@ jobs:
             ls -la {package}/python/pymesh/third_party/lib/ || echo "No lib dir"
             ls -la {package}/python/pymesh/third_party/include/ || echo "No include dir"
 
-          CIBW_BEFORE_ALL_WINDOWS: |
-            echo "=== DEBUG: Starting Windows build ==="
-            dir {package}\python\pymesh\third_party\ || echo "third_party dir doesn't exist yet"
-            cd /d {package}\third_party && python build.py all
-            echo "=== DEBUG: third_party build complete ==="
-            dir {package}\python\pymesh\third_party\lib\ || echo "No lib dir"
+          # Windows: third_party build runs via setup.py (not BEFORE_ALL)
+          # vcpkg provides external deps (TBB, CGAL, etc.)
+          CIBW_BEFORE_ALL_WINDOWS: "echo Windows build starting - vcpkg deps already installed"
 
           CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
           CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
