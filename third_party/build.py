@@ -113,8 +113,9 @@ def build(package, cleanup):
     elif package == "clipper":
         build_generic("Clipper/cpp", cleanup=cleanup);
     elif package == "tbb":
+        # Build static to avoid delocate issues with shared lib deps
         build_generic("tbb",
-                " -DTBB_BUILD_SHARED=On -DTBB_BUILD_STATIC=Off",
+                " -DTBB_BUILD_SHARED=Off -DTBB_BUILD_STATIC=On",
                 cleanup=cleanup);
     elif package == "json":
         build_generic("json",

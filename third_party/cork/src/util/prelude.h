@@ -30,8 +30,12 @@
 #define _USE_MATH_DEFINES
 #endif
 #include <math.h>
-
 #include <cmath>
+
+// Fallback for MinGW/GCC which ignores _USE_MATH_DEFINES
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
