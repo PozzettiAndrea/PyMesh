@@ -95,7 +95,8 @@ jobs:
           CIBW_BEFORE_ALL_WINDOWS: >
             cd /d {package}\third_party && python build.py all
 
-          CIBW_ENVIRONMENT: "PYMESH_PATH={package}"
+          CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
+          CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0"
           CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
           # Test the wheel
