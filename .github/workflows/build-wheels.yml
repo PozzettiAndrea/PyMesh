@@ -139,7 +139,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pytest
           # Find and install the wheel for this Python version
-          WHEEL=$(ls dist/*cp${{ matrix.python && format('{0}{1}', split(matrix.python, '.')[0], split(matrix.python, '.')[1]) }}*.whl 2>/dev/null | head -1 || ls dist/*.whl | head -1)
+          PYVER=$(python -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
+          WHEEL=$(ls dist/*cp${PYVER}*.whl 2>/dev/null | head -1 || ls dist/*.whl | head -1)
           pip install "$WHEEL"
           python -c "import pymesh; print(f'PyMesh {pymesh.__version__} loaded')"
           pytest python/pymesh/tests -v --tb=short
