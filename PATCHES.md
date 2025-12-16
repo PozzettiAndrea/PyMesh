@@ -18,6 +18,7 @@ The upstream PyMesh repository has not been updated since 2020 and uses outdated
 | Eigen | 2018 → 3.4.0 | Fix compiler bugs, better support |
 | Cork | Vendored | Apply Windows compatibility fixes |
 | Build | Add `-fcommon` | GCC 10+ compatibility |
+| Build | Add `DYLD_LIBRARY_PATH` | macOS delocate finds third_party libs |
 | Python | Remove Tester | numpy 1.25+ compatibility |
 
 ## Detailed Changes
