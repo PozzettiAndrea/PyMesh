@@ -46,6 +46,7 @@ jobs:
           key: third-party-${{ runner.os }}-${{ hashFiles('third_party/build.py', 'third_party/**/CMakeLists.txt') }}
           restore-keys: |
             third-party-${{ runner.os }}-
+          save-always: true  # Save cache even if build fails
 
       # Windows vcpkg cache
       - name: Restore vcpkg cache
