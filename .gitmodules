@@ -2,10 +2,6 @@
 	path = third_party/carve
 	url = https://github.com/PyMesh/carve.git
 	shallow = true
-[submodule "third_party/cork"]
-	path = third_party/cork
-	url = https://github.com/PyMesh/cork.git
-	shallow = true
 [submodule "third_party/tetgen"]
 	path = third_party/tetgen
 	url = https://github.com/PyMesh/tetgen.git

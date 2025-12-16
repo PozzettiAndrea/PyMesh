@@ -90,7 +90,7 @@ class cmake_build(build):
 
             os.chdir(build_dir)
             commands = [
-                "cmake .. -DCMAKE_BUILD_TYPE=Release" + cmake_args,
+                "cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5" + cmake_args,
                 "cmake --build . --config Release -- -j {}".format(num_cores),
             ] + (["cmake --build . --target install"] if want_install else [])
             for c in commands:

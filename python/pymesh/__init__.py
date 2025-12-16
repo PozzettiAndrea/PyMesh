@@ -2,9 +2,6 @@ from .version import __version__
 from . import PyMeshSetting
 from .timethis import timethis
 
-from numpy.testing import Tester
-test = Tester().test
-
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
 try:  # Python 2.7+
