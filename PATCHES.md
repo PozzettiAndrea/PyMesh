@@ -20,6 +20,8 @@ The upstream PyMesh repository has not been updated since 2020 and uses outdated
 | Build | Add `-fcommon` | GCC 10+ compatibility |
 | Build | Add `DYLD_LIBRARY_PATH` | macOS delocate finds third_party libs |
 | Build | Use Ninja + parallel | Faster CI builds |
+| Build | TBB static (not shared) | Avoid delocate dependency issues |
+| Cork | Fallback M_PI define | MinGW ignores _USE_MATH_DEFINES |
 | Python | Remove Tester | numpy 1.25+ compatibility |
 
 ## Detailed Changes
