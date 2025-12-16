@@ -35,7 +35,43 @@ def ninja_available():
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
+def is_already_built(libname):
+    """Check if library is already built (for cache support)."""
+    pymesh_dir = get_pymesh_dir()
+    install_dir = os.path.join(pymesh_dir, "python", "pymesh", "third_party")
+
+    # Check for marker files indicating successful build
+    markers = {
+        "cgal": "include/CGAL/version.h",
+        "cork": "lib/libcork.a",
+        "eigen": "include/eigen3/Eigen/Core",
+        "tetgen": "lib/libtet.a",
+        "triangle": "lib/libtriangle.a",
+        "qhull": "include/libqhull_r/qhull_ra.h",
+        "clipper": "lib/libpolyclipping.a",
+        "draco": "include/draco/core/draco_version.h",
+        "tbb": "include/tbb/tbb.h",
+        "mmg": "include/mmg/mmg3d/libmmg3d.h",
+        "json": "include/nlohmann/json.hpp",
+    }
+
+    # Handle special cases
+    if libname == "Clipper/cpp":
+        libname = "clipper"
+
+    marker = markers.get(libname)
+    if marker:
+        marker_path = os.path.join(install_dir, marker)
+        if os.path.exists(marker_path):
+            print(f"[CACHE] {libname} already built, skipping...")
+            return True
+    return False
+
 def build_generic(libname, build_flags="", cleanup=True):
+    # Skip if already built (cache hit)
+    if is_already_built(libname):
+        return
+
     pymesh_dir = get_pymesh_dir();
     build_dir = os.path.join(pymesh_dir, "third_party", "build", libname);
     if not os.path.exists(build_dir):
