@@ -147,11 +147,32 @@ jobs:
           pytest python/pymesh/tests -v --tb=short
         shell: bash
 
+  # Build source distribution
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
   # Publish on tag
   publish:
-    needs: [build_wheels, test]
+    needs: [build_wheels, build_sdist, test]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write      # For GitHub release
+      id-token: write      # For PyPI trusted publishing
 
     steps:
       - name: Download all wheels
@@ -161,10 +182,27 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
 
-      - name: Create Release
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+
+      - name: List wheels
+        run: ls -la dist/
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Uses trusted publishing - no token needed!
+          # Configure at: https://pypi.org/manage/project/pymesh2/settings/publishing/
+          packages-dir: dist/
+          skip-existing: true  # Don't fail if version exists
