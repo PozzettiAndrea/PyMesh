@@ -21,6 +21,9 @@ IF (NOT TBB_ROOT)
   SET(TBB_ROOT $ENV{TBBROOT})
 ENDIF()
 
+# Add PyMesh third_party to search path
+SET(PYMESH_THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/python/pymesh/third_party")
+
 IF (WIN32)
   # workaround for parentheses in variable name / CMP0053
   SET(PROGRAMFILESx86 "PROGRAMFILES(x86)")
@@ -65,9 +68,17 @@ IF (WIN32)
   SET(TBB_BINDIR ${EMBREE_TBB_ROOT}/bin/${TBB_ARCH}/${TBB_VCVER})
 
   IF (EMBREE_TBB_ROOT STREQUAL "")
-    FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h)
-    FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static)
-    FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static)
+    # Search in PyMesh third_party first, then system paths
+    FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/include
+      PATH_SUFFIXES tbb
+    )
+    FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static libtbb_static
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
+    )
+    FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static libtbbmalloc_static
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
+    )
   ELSE()
     SET(TBB_INCLUDE_DIR TBB_INCLUDE_DIR-NOTFOUND)
     SET(TBB_LIBRARY TBB_LIBRARY-NOTFOUND)
@@ -95,9 +106,17 @@ ELSE ()
   )
 
   IF (EMBREE_TBB_ROOT STREQUAL "")
-    FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h)
-    FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static)
-    FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static)
+    # Search in PyMesh third_party first, then system paths
+    FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/include
+      PATH_SUFFIXES tbb
+    )
+    FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static libtbb_static
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
+    )
+    FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static libtbbmalloc_static
+      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
+    )
 
   ELSEIF (EXISTS ${EMBREE_TBB_ROOT}/cmake/TBBBuild.cmake AND EXISTS ${EMBREE_TBB_ROOT}/src/tbb/tbb_version.h)
     OPTION(EMBREE_TBB_STATIC_LIB "Build TBB as a static library (building TBB as a static library is NOT recommended)")
