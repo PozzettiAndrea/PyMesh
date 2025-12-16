@@ -22,19 +22,31 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Check for existing wheels
+        id: check-wheels
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          name: wheels-py310-${{ matrix.os }}
+          workflow: build-wheels-py310.yml
+          commit: ${{ github.sha }}
+          path: ./wheelhouse
+          if_no_artifact_found: warn
+
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+        if: steps.check-wheels.outcome == 'failure' && runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libgmp-dev libmpfr-dev \
             libboost-all-dev libeigen3-dev libcgal-dev swig
 
       - name: Install macOS dependencies
-        if: runner.os == 'macOS'
+        if: steps.check-wheels.outcome == 'failure' && runner.os == 'macOS'
         run: |
           brew install cmake ninja boost eigen cgal gmp mpfr swig nlohmann-json openblas tbb
 
       - name: Cache third-party libraries
+        if: steps.check-wheels.outcome == 'failure'
         uses: actions/cache@v4
         with:
           path: python/pymesh/third_party
@@ -43,7 +55,7 @@ jobs:
             third-party-v2-${{ runner.os }}-
 
       - name: Restore vcpkg cache
-        if: runner.os == 'Windows'
+        if: steps.check-wheels.outcome == 'failure' && runner.os == 'Windows'
         id: vcpkg-cache
         uses: actions/cache/restore@v4
         with:
@@ -52,19 +64,20 @@ jobs:
           restore-keys: vcpkg-windows-
 
       - name: Install Windows dependencies
-        if: runner.os == 'Windows'
+        if: steps.check-wheels.outcome == 'failure' && runner.os == 'Windows'
         run: |
           vcpkg install cgal:x64-windows boost-thread:x64-windows boost-system:x64-windows eigen3:x64-windows gmp:x64-windows mpfr:x64-windows tbb:x64-windows openblas:x64-windows
         shell: cmd
 
       - name: Save vcpkg cache
-        if: runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        if: steps.check-wheels.outcome == 'failure' && runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: C:\vcpkg\installed
           key: vcpkg-windows-v2
 
       - name: Build wheels
+        if: steps.check-wheels.outcome == 'failure'
         uses: pypa/cibuildwheel@v2.21.3
         env:
           CIBW_BUILD: "cp310-*"
