@@ -77,6 +77,7 @@ jobs:
           # Build for Python 3.10, 3.11, 3.12
           CIBW_BUILD: "cp310-* cp311-* cp312-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux* pp*"
+          CIBW_BUILD_VERBOSITY: 1
 
           # Linux container setup
           CIBW_BEFORE_ALL_LINUX: |
@@ -100,10 +101,20 @@ jobs:
             cd {package}/third_party && python3 build.py all
 
           CIBW_BEFORE_ALL_MACOS: |
+            echo "=== DEBUG: Starting macOS build ==="
+            echo "Package dir: {package}"
+            ls -la {package}/python/pymesh/third_party/ || echo "third_party dir doesn't exist yet"
             cd {package}/third_party && python3 build.py all
+            echo "=== DEBUG: third_party build complete ==="
+            ls -la {package}/python/pymesh/third_party/lib/ || echo "No lib dir"
+            ls -la {package}/python/pymesh/third_party/include/ || echo "No include dir"
 
-          CIBW_BEFORE_ALL_WINDOWS: >
+          CIBW_BEFORE_ALL_WINDOWS: |
+            echo "=== DEBUG: Starting Windows build ==="
+            dir {package}\python\pymesh\third_party\ || echo "third_party dir doesn't exist yet"
             cd /d {package}\third_party && python build.py all
+            echo "=== DEBUG: third_party build complete ==="
+            dir {package}\python\pymesh\third_party\lib\ || echo "No lib dir"
 
           CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
           CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
