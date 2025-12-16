@@ -7,11 +7,19 @@ import multiprocessing
 import os
 import os.path
 from setuptools import setup, Distribution, Extension
-from subprocess import check_call
+from subprocess import check_call, DEVNULL
 import shutil
 import platform
 
 exec(open(os.path.join('python/pymesh/version.py')).read())
+
+def ninja_available():
+    """Check if ninja is available on the system."""
+    try:
+        check_call(["ninja", "--version"], stdout=DEVNULL, stderr=DEVNULL)
+        return True
+    except (OSError, FileNotFoundError):
+        return False
 
 num_cores = multiprocessing.cpu_count()
 num_cores = max(1, num_cores)
@@ -89,9 +97,11 @@ class cmake_build(build):
                 os.makedirs(build_dir)
 
             os.chdir(build_dir)
+            # Use Ninja if available (faster parallel builds)
+            generator_flag = " -GNinja" if ninja_available() else ""
             commands = [
-                "cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5" + cmake_args,
-                "cmake --build . --config Release -- -j {}".format(num_cores),
+                "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5".format(generator_flag) + cmake_args,
+                "cmake --build . --config Release --parallel {}".format(num_cores),
             ] + (["cmake --build . --target install"] if want_install else [])
             for c in commands:
                 check_call(c.split())
