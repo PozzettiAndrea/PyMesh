@@ -36,7 +36,7 @@ jobs:
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: |
-          brew install cmake ninja boost eigen cgal gmp mpfr swig nlohmann-json openblas
+          brew install cmake ninja boost eigen cgal gmp mpfr swig nlohmann-json openblas tbb
 
       # Cache third-party build output (saves 10-20 min per build)
       - name: Cache third-party libraries
