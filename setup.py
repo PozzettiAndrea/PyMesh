@@ -91,7 +91,7 @@ class cmake_build(build):
             # Use Ninja if available (faster parallel builds)
             generator_flag = " -GNinja" if ninja_available() else ""
             commands = [
-                "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5".format(generator_flag) + cmake_args,
+                "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}".format(generator_flag, sys.executable) + cmake_args,
                 "cmake --build . --config Release --parallel {}".format(num_cores),
             ] + (["cmake --build . --target install"] if want_install else [])
             for c in commands:
