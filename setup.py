@@ -5,6 +5,7 @@ from distutils.command.build_ext import build_ext
 from distutils.command.clean import clean
 import multiprocessing
 import os
+import sys
 import os.path
 from setuptools import setup, Distribution, Extension
 from subprocess import check_call, DEVNULL
