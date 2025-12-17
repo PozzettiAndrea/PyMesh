@@ -118,7 +118,8 @@ jobs:
 
           CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
           CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
-          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CFLAGS=-fcommon CXXFLAGS=-fcommon"
+          # MinGW: -include io.h fixes _chsize error in unistd.h when TBB includes gcc_generic.h
+          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CFLAGS='-fcommon -include io.h' CXXFLAGS='-fcommon -include io.h'"
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=$PYMESH_PATH/python/pymesh/third_party/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 
