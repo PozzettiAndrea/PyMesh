@@ -107,6 +107,11 @@ def build(package, cleanup):
         for libname in get_third_party_dependencies():
             build(libname, cleanup);
     elif package == "cgal":
+        # On Windows, skip building CGAL from third_party - use vcpkg's CGAL instead
+        # The old third_party CGAL headers are incompatible with vcpkg's newer Boost
+        if sys.platform == "win32":
+            print("[SKIP] Skipping CGAL on Windows - using vcpkg's CGAL instead")
+            return
         build_generic("cgal",
                 " -DWITH_CGAL_ImageIO=Off -DWITH_CGAL_Qt5=Off",
                 cleanup=cleanup);

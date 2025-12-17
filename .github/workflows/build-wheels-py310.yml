@@ -14,7 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-2022]
+        # TEMP: Only Windows for debugging - re-enable others when Windows works
+        os: [windows-2022]
+        # os: [ubuntu-22.04, macos-14, windows-2022]
 
     steps:
       - name: Checkout
