@@ -121,6 +121,9 @@ def build(package, cleanup):
         build_generic("json",
                 " -DJSON_BuildTests=Off",
                 cleanup=cleanup);
+    elif package == "mmg":
+        # MinGW doesn't have separate libm - math is in C runtime
+        build_generic("mmg", " -DM_LIB=", cleanup=cleanup);
     else:
         build_generic(package, cleanup=cleanup);
 
