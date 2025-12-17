@@ -118,7 +118,7 @@ jobs:
 
           CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
           CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
-          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CFLAGS=-fcommon CXXFLAGS=-fcommon"
 
           # macOS needs DYLD_LIBRARY_PATH for delocate to find third_party libs
           # Note: {package} doesn't work here, use $PYMESH_PATH from environment

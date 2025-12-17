@@ -124,8 +124,11 @@ def build(package, cleanup):
     elif package == "mmg":
         mmg_flags = ""
         if sys.platform == "win32":
-            # MinGW doesn't have separate libm - math is in C runtime
-            mmg_flags = " -DM_LIB="
+            # MinGW: math is in C runtime, but CMake needs M_LIB set to avoid NOTFOUND
+            mmg_flags = " -DM_LIB:FILEPATH="
+            # GCC 10+ defaults to -fno-common, causing multiple definition errors
+            # mmg uses global function pointers in headers without extern declarations
+            mmg_flags += " -DCMAKE_C_FLAGS=-fcommon"
         build_generic("mmg", mmg_flags, cleanup=cleanup);
     else:
         build_generic(package, cleanup=cleanup);
