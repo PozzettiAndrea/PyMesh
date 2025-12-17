@@ -122,8 +122,11 @@ def build(package, cleanup):
                 " -DJSON_BuildTests=Off",
                 cleanup=cleanup);
     elif package == "mmg":
-        # MinGW doesn't have separate libm - math is in C runtime
-        build_generic("mmg", " -DM_LIB=", cleanup=cleanup);
+        mmg_flags = ""
+        if sys.platform == "win32":
+            # MinGW doesn't have separate libm - math is in C runtime
+            mmg_flags = " -DM_LIB="
+        build_generic("mmg", mmg_flags, cleanup=cleanup);
     else:
         build_generic(package, cleanup=cleanup);
 
