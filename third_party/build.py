@@ -79,34 +79,39 @@ def build_generic(libname, build_flags="", cleanup=True):
 
     # On Windows, use Visual Studio generator (MSVC) for compatibility with vcpkg
     # On other platforms, use Ninja if available for faster builds
-    if sys.platform == "win32":
-        generator_flag = ' -G"Visual Studio 17 2022" -A x64'
-    elif ninja_available():
-        generator_flag = " -GNinja"
-    else:
-        generator_flag = ""
+    source_dir = "{}/third_party/{}".format(pymesh_dir, libname)
+    install_prefix = "{}/python/pymesh/third_party/".format(pymesh_dir)
 
-    # Configure
-    cmd = "cmake" + \
-            generator_flag + \
-            " {}/third_party/{}".format(pymesh_dir, libname) + \
-            " -DBUILD_SHARED_LIBS=Off" + \
-            " -DCMAKE_POSITION_INDEPENDENT_CODE=On" + \
-            " -DCMAKE_POLICY_VERSION_MINIMUM=3.5" + \
-            build_flags + \
-            " -DCMAKE_INSTALL_PREFIX={}/python/pymesh/third_party/".format(pymesh_dir);
-    # Use shell=True on Windows to handle quotes in generator flag
     if sys.platform == "win32":
-        subprocess.check_call(cmd, cwd=build_dir, shell=True);
+        # Build command as list to handle spaces in generator name
+        configure_cmd = [
+            "cmake", source_dir,
+            "-G", "Visual Studio 17 2022",
+            "-A", "x64",
+            "-DBUILD_SHARED_LIBS=Off",
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=On",
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+            "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix),
+        ] + (build_flags.split() if build_flags else [])
     else:
-        subprocess.check_call(cmd.split(), cwd=build_dir);
+        generator_flag = "-GNinja" if ninja_available() else ""
+        configure_cmd = [
+            "cmake", source_dir,
+        ] + ([generator_flag] if generator_flag else []) + [
+            "-DBUILD_SHARED_LIBS=Off",
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=On",
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+            "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix),
+        ] + (build_flags.split() if build_flags else [])
+
+    subprocess.check_call(configure_cmd, cwd=build_dir)
 
     # Build (with parallel jobs) - add --config Release for MSVC multi-config generators
-    cmd = "cmake --build {} --config Release --parallel".format(build_dir);
-    subprocess.check_call(cmd.split());
+    build_cmd = ["cmake", "--build", build_dir, "--config", "Release", "--parallel"]
+    subprocess.check_call(build_cmd)
 
-    cmd = "cmake --build {} --config Release --target install".format(build_dir);
-    subprocess.check_call(cmd.split());
+    install_cmd = ["cmake", "--build", build_dir, "--config", "Release", "--target", "install"]
+    subprocess.check_call(install_cmd)
 
     # Clean up
     if cleanup:

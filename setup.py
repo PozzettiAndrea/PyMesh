@@ -92,17 +92,27 @@ class cmake_build(build):
             # On Windows, use Visual Studio generator (MSVC) for compatibility with vcpkg
             # On other platforms, use Ninja if available for faster builds
             if platform.system() == "Windows":
-                generator_flag = " -G\"Visual Studio 17 2022\" -A x64"
-            elif ninja_available():
-                generator_flag = " -GNinja"
+                # Build command as list to handle spaces in generator name
+                configure_cmd = [
+                    "cmake", "..",
+                    "-G", "Visual Studio 17 2022",
+                    "-A", "x64",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                    "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+                ] + cmake_args.split()
+                build_cmd = ["cmake", "--build", ".", "--config", "Release", "--parallel", str(num_cores)]
+                install_cmd = ["cmake", "--build", ".", "--config", "Release", "--target", "install"]
             else:
-                generator_flag = ""
-            commands = [
-                "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}".format(generator_flag, sys.executable) + cmake_args,
-                "cmake --build . --config Release --parallel {}".format(num_cores),
-            ] + (["cmake --build . --target install"] if want_install else [])
+                generator_flag = " -GNinja" if ninja_available() else ""
+                configure_cmd = "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}{}".format(
+                    generator_flag, sys.executable, cmake_args).split()
+                build_cmd = "cmake --build . --config Release --parallel {}".format(num_cores).split()
+                install_cmd = "cmake --build . --target install".split()
+
+            commands = [configure_cmd, build_cmd] + ([install_cmd] if want_install else [])
             for c in commands:
-                check_call(c.split())
+                check_call(c)
         finally:
             os.chdir(cwd)
 
