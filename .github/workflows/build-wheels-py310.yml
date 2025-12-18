@@ -114,12 +114,14 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: |
             cd {package}/third_party && python3 build.py all
 
-          CIBW_BEFORE_ALL_WINDOWS: "echo Windows build starting - vcpkg deps already installed"
+          # Build third_party deps on Windows before wheel build
+          CIBW_BEFORE_ALL_WINDOWS: |
+            cd {package}/third_party && python build.py all
 
           CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
           CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
-          # MinGW: -include io.h fixes _chsize error in unistd.h when TBB includes gcc_generic.h
-          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CFLAGS='-fcommon -include io.h' CXXFLAGS='-fcommon -include io.h'"
+          # Windows: Use vcpkg and force MSVC generator (not MinGW)
+          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CMAKE_GENERATOR='Visual Studio 17 2022'"
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=$PYMESH_PATH/python/pymesh/third_party/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 

@@ -89,8 +89,14 @@ class cmake_build(build):
                 os.makedirs(build_dir)
 
             os.chdir(build_dir)
-            # Use Ninja if available (faster parallel builds)
-            generator_flag = " -GNinja" if ninja_available() else ""
+            # On Windows, use Visual Studio generator (MSVC) for compatibility with vcpkg
+            # On other platforms, use Ninja if available for faster builds
+            if platform.system() == "Windows":
+                generator_flag = " -G\"Visual Studio 17 2022\" -A x64"
+            elif ninja_available():
+                generator_flag = " -GNinja"
+            else:
+                generator_flag = ""
             commands = [
                 "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}".format(generator_flag, sys.executable) + cmake_args,
                 "cmake --build . --config Release --parallel {}".format(num_cores),

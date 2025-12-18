@@ -77,8 +77,14 @@ def build_generic(libname, build_flags="", cleanup=True):
     if not os.path.exists(build_dir):
         os.makedirs(build_dir);
 
-    # Use Ninja if available (faster parallel builds)
-    generator_flag = " -GNinja" if ninja_available() else ""
+    # On Windows, use Visual Studio generator (MSVC) for compatibility with vcpkg
+    # On other platforms, use Ninja if available for faster builds
+    if sys.platform == "win32":
+        generator_flag = ' -G"Visual Studio 17 2022" -A x64'
+    elif ninja_available():
+        generator_flag = " -GNinja"
+    else:
+        generator_flag = ""
 
     # Configure
     cmd = "cmake" + \
@@ -89,13 +95,17 @@ def build_generic(libname, build_flags="", cleanup=True):
             " -DCMAKE_POLICY_VERSION_MINIMUM=3.5" + \
             build_flags + \
             " -DCMAKE_INSTALL_PREFIX={}/python/pymesh/third_party/".format(pymesh_dir);
-    subprocess.check_call(cmd.split(), cwd=build_dir);
+    # Use shell=True on Windows to handle quotes in generator flag
+    if sys.platform == "win32":
+        subprocess.check_call(cmd, cwd=build_dir, shell=True);
+    else:
+        subprocess.check_call(cmd.split(), cwd=build_dir);
 
-    # Build (with parallel jobs)
-    cmd = "cmake --build {} --parallel".format(build_dir);
+    # Build (with parallel jobs) - add --config Release for MSVC multi-config generators
+    cmd = "cmake --build {} --config Release --parallel".format(build_dir);
     subprocess.check_call(cmd.split());
 
-    cmd = "cmake --build {} --target install".format(build_dir);
+    cmd = "cmake --build {} --config Release --target install".format(build_dir);
     subprocess.check_call(cmd.split());
 
     # Clean up
@@ -115,6 +125,8 @@ def build(package, cleanup):
         build_generic("cgal",
                 " -DWITH_CGAL_ImageIO=Off -DWITH_CGAL_Qt5=Off",
                 cleanup=cleanup);
+    elif package == "qhull":
+        build_generic("qhull", cleanup=cleanup);
     elif package == "clipper":
         build_generic("Clipper/cpp", cleanup=cleanup);
     elif package == "tbb":
@@ -129,11 +141,8 @@ def build(package, cleanup):
     elif package == "mmg":
         mmg_flags = ""
         if sys.platform == "win32":
-            # MinGW: math is in C runtime, but CMake needs M_LIB set to avoid NOTFOUND
+            # Windows/MSVC: math is in C runtime, set M_LIB empty to avoid NOTFOUND
             mmg_flags = " -DM_LIB:FILEPATH="
-            # GCC 10+ defaults to -fno-common, causing multiple definition errors
-            # mmg uses global function pointers in headers without extern declarations
-            mmg_flags += " -DCMAKE_C_FLAGS=-fcommon"
         build_generic("mmg", mmg_flags, cleanup=cleanup);
     else:
         build_generic(package, cleanup=cleanup);
