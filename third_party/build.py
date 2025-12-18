@@ -135,6 +135,11 @@ def build(package, cleanup):
     elif package == "clipper":
         build_generic("Clipper/cpp", cleanup=cleanup);
     elif package == "tbb":
+        # On Windows, skip building TBB from third_party - use vcpkg's TBB instead
+        # vcpkg's TBB is compiled with /MD runtime which matches our build
+        if sys.platform == "win32":
+            print("[SKIP] Skipping TBB on Windows - using vcpkg's TBB instead")
+            return
         # Build static to avoid delocate issues with shared lib deps
         build_generic("tbb",
                 " -DTBB_BUILD_SHARED=Off -DTBB_BUILD_STATIC=On",

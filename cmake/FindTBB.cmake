@@ -25,66 +25,12 @@ ENDIF()
 SET(PYMESH_THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/python/pymesh/third_party")
 
 IF (WIN32)
-  # On Windows, first try to find TBB in PyMesh third_party (built from source)
-  # This works for both MSVC and MinGW builds
-  FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
-    PATHS ${PYMESH_THIRD_PARTY_DIR}/include
-    NO_DEFAULT_PATH
-  )
-  # For MSVC builds, the library is in lib/Release subdirectory (multi-config generator)
-  # For MinGW, it's directly in lib
-  FIND_LIBRARY(TBB_LIBRARY NAMES tbb_static tbb libtbb_static libtbb
-    PATHS
-      ${PYMESH_THIRD_PARTY_DIR}/lib/Release
-      ${PYMESH_THIRD_PARTY_DIR}/lib
-    NO_DEFAULT_PATH
-  )
-  FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc_static tbbmalloc libtbbmalloc_static libtbbmalloc
-    PATHS
-      ${PYMESH_THIRD_PARTY_DIR}/lib/Release
-      ${PYMESH_THIRD_PARTY_DIR}/lib
-    NO_DEFAULT_PATH
-  )
-
-  # If not found in third_party, fall back to system search
-  IF (NOT TBB_LIBRARY)
-    IF (MSVC)
-      # MSVC system search paths
-      SET(PROGRAMFILESx86 "PROGRAMFILES(x86)")
-      SET(PROGRAMFILES32 "$ENV{${PROGRAMFILESx86}}")
-      IF (NOT PROGRAMFILES32)
-        SET(PROGRAMFILES32 "$ENV{PROGRAMFILES}")
-      ENDIF()
-      IF (NOT PROGRAMFILES32)
-        SET(PROGRAMFILES32 "C:/Program Files (x86)")
-      ENDIF()
-      FIND_PATH(EMBREE_TBB_ROOT include/tbb/tbb.h
-        DOC "Root of TBB installation"
-        HINTS ${TBB_ROOT}
-        PATHS
-          ${PROJECT_SOURCE_DIR}/tbb
-          ${PROJECT_SOURCE_DIR}/../tbb
-          "${PROGRAMFILES32}/IntelSWTools/compilers_and_libraries/windows/tbb"
-          "${PROGRAMFILES32}/Intel/Composer XE/tbb"
-          "${PROGRAMFILES32}/Intel/compilers_and_libraries/windows/tbb"
-      )
-
-      IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
-        SET(TBB_ARCH intel64)
-      ELSE()
-        SET(TBB_ARCH ia32)
-      ENDIF()
-
-      SET(TBB_VCVER vc14)
-      SET(TBB_LIBDIR ${EMBREE_TBB_ROOT}/lib/${TBB_ARCH}/${TBB_VCVER})
-
-      IF (EMBREE_TBB_ROOT)
-        FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h PATHS ${EMBREE_TBB_ROOT}/include NO_DEFAULT_PATH)
-        FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
-        FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
-      ENDIF()
-    ENDIF()
-  ENDIF()
+  # On Windows, use vcpkg's TBB directly (we skip building TBB in third_party)
+  # vcpkg's TBB is compiled with /MD runtime which matches our build
+  # Use standard CMake find_package which works with vcpkg toolchain
+  FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h)
+  FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb12)
+  FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc12)
 
 ELSE ()
 
