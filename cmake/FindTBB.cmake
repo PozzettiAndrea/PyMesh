@@ -25,84 +25,64 @@ ENDIF()
 SET(PYMESH_THIRD_PARTY_DIR "${CMAKE_SOURCE_DIR}/python/pymesh/third_party")
 
 IF (WIN32)
-  # On Windows with MinGW (non-MSVC), prioritize PyMesh third_party since vcpkg provides MSVC libs
-  IF (NOT MSVC)
-    # MinGW: Use PyMesh's built TBB directly, bypassing vcpkg's MSVC-compiled TBB
-    FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
-      PATHS ${PYMESH_THIRD_PARTY_DIR}/include
-      NO_DEFAULT_PATH
-    )
-    FIND_LIBRARY(TBB_LIBRARY NAMES tbb_static libtbb_static
-      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib
-      NO_DEFAULT_PATH
-    )
-    FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc_static libtbbmalloc_static
-      PATHS ${PYMESH_THIRD_PARTY_DIR}/lib
-      NO_DEFAULT_PATH
-    )
-  ELSE()
-    # MSVC path (original logic)
-    # workaround for parentheses in variable name / CMP0053
-    SET(PROGRAMFILESx86 "PROGRAMFILES(x86)")
-    SET(PROGRAMFILES32 "$ENV{${PROGRAMFILESx86}}")
-    IF (NOT PROGRAMFILES32)
-      SET(PROGRAMFILES32 "$ENV{PROGRAMFILES}")
-    ENDIF()
-    IF (NOT PROGRAMFILES32)
-      SET(PROGRAMFILES32 "C:/Program Files (x86)")
-    ENDIF()
-    FIND_PATH(EMBREE_TBB_ROOT include/tbb/tbb.h
-      DOC "Root of TBB installation"
-      PATHS ${PROJECT_SOURCE_DIR}/tbb
-      NO_DEFAULT_PATH
-    )
-    FIND_PATH(EMBREE_TBB_ROOT include/tbb/tbb.h
-      HINTS ${TBB_ROOT}
-      PATHS
-        ${PROJECT_SOURCE_DIR}/../tbb
-        "${PROGRAMFILES32}/IntelSWTools/compilers_and_libraries/windows/tbb"
-        "${PROGRAMFILES32}/Intel/Composer XE/tbb"
-        "${PROGRAMFILES32}/Intel/compilers_and_libraries/windows/tbb"
-    )
+  # On Windows, first try to find TBB in PyMesh third_party (built from source)
+  # This works for both MSVC and MinGW builds
+  FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
+    PATHS ${PYMESH_THIRD_PARTY_DIR}/include
+    NO_DEFAULT_PATH
+  )
+  # For MSVC builds, the library is in lib/Release subdirectory (multi-config generator)
+  # For MinGW, it's directly in lib
+  FIND_LIBRARY(TBB_LIBRARY NAMES tbb_static tbb libtbb_static libtbb
+    PATHS
+      ${PYMESH_THIRD_PARTY_DIR}/lib/Release
+      ${PYMESH_THIRD_PARTY_DIR}/lib
+    NO_DEFAULT_PATH
+  )
+  FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc_static tbbmalloc libtbbmalloc_static libtbbmalloc
+    PATHS
+      ${PYMESH_THIRD_PARTY_DIR}/lib/Release
+      ${PYMESH_THIRD_PARTY_DIR}/lib
+    NO_DEFAULT_PATH
+  )
 
-    IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
-      SET(TBB_ARCH intel64)
-    ELSE()
-      SET(TBB_ARCH ia32)
-    ENDIF()
+  # If not found in third_party, fall back to system search
+  IF (NOT TBB_LIBRARY)
+    IF (MSVC)
+      # MSVC system search paths
+      SET(PROGRAMFILESx86 "PROGRAMFILES(x86)")
+      SET(PROGRAMFILES32 "$ENV{${PROGRAMFILESx86}}")
+      IF (NOT PROGRAMFILES32)
+        SET(PROGRAMFILES32 "$ENV{PROGRAMFILES}")
+      ENDIF()
+      IF (NOT PROGRAMFILES32)
+        SET(PROGRAMFILES32 "C:/Program Files (x86)")
+      ENDIF()
+      FIND_PATH(EMBREE_TBB_ROOT include/tbb/tbb.h
+        DOC "Root of TBB installation"
+        HINTS ${TBB_ROOT}
+        PATHS
+          ${PROJECT_SOURCE_DIR}/tbb
+          ${PROJECT_SOURCE_DIR}/../tbb
+          "${PROGRAMFILES32}/IntelSWTools/compilers_and_libraries/windows/tbb"
+          "${PROGRAMFILES32}/Intel/Composer XE/tbb"
+          "${PROGRAMFILES32}/Intel/compilers_and_libraries/windows/tbb"
+      )
 
-    IF (MSVC10)
-      SET(TBB_VCVER vc10)
-    ELSEIF (MSVC11)
-      SET(TBB_VCVER vc11)
-    ELSEIF (MSVC12)
-      SET(TBB_VCVER vc12)
-    ELSE()
+      IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        SET(TBB_ARCH intel64)
+      ELSE()
+        SET(TBB_ARCH ia32)
+      ENDIF()
+
       SET(TBB_VCVER vc14)
-    ENDIF()
+      SET(TBB_LIBDIR ${EMBREE_TBB_ROOT}/lib/${TBB_ARCH}/${TBB_VCVER})
 
-    SET(TBB_LIBDIR ${EMBREE_TBB_ROOT}/lib/${TBB_ARCH}/${TBB_VCVER})
-    SET(TBB_BINDIR ${EMBREE_TBB_ROOT}/bin/${TBB_ARCH}/${TBB_VCVER})
-
-    IF (EMBREE_TBB_ROOT STREQUAL "")
-      # Search in PyMesh third_party first, then system paths
-      FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h
-        PATHS ${PYMESH_THIRD_PARTY_DIR}/include
-        PATH_SUFFIXES tbb
-      )
-      FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static libtbb_static
-        PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
-      )
-      FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static libtbbmalloc_static
-        PATHS ${PYMESH_THIRD_PARTY_DIR}/lib ${PYMESH_THIRD_PARTY_DIR}/lib64
-      )
-    ELSE()
-      SET(TBB_INCLUDE_DIR TBB_INCLUDE_DIR-NOTFOUND)
-      SET(TBB_LIBRARY TBB_LIBRARY-NOTFOUND)
-      SET(TBB_LIBRARY_MALLOC TBB_LIBRARY_MALLOC-NOTFOUND)
-      FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h PATHS ${EMBREE_TBB_ROOT}/include NO_DEFAULT_PATH)
-      FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static libtbb_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
-      FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static libtbbmalloc_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
+      IF (EMBREE_TBB_ROOT)
+        FIND_PATH(TBB_INCLUDE_DIR tbb/tbb.h PATHS ${EMBREE_TBB_ROOT}/include NO_DEFAULT_PATH)
+        FIND_LIBRARY(TBB_LIBRARY NAMES tbb tbb_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
+        FIND_LIBRARY(TBB_LIBRARY_MALLOC NAMES tbbmalloc tbbmalloc_static PATHS ${TBB_LIBDIR} ${EMBREE_TBB_ROOT}/lib NO_DEFAULT_PATH)
+      ENDIF()
     ENDIF()
   ENDIF()
 
