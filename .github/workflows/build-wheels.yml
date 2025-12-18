@@ -74,8 +74,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         env:
-          # Build for Python 3.10, 3.11, 3.12
-          CIBW_BUILD: "cp310-* cp311-* cp312-*"
+          # Build for Python 3.9, 3.10, 3.11, 3.12, 3.13
+          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux* pp*"
           CIBW_BUILD_VERBOSITY: 1
 
@@ -142,8 +142,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14]
-        python: ["3.10", "3.11", "3.12"]
+        os: [ubuntu-22.04, macos-14, windows-2022]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout (for tests)
@@ -164,13 +164,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy pytest
-          # Find and install the wheel for this Python version
-          PYVER=$(python -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')")
-          WHEEL=$(ls dist/*cp${PYVER}*.whl 2>/dev/null | head -1 || ls dist/*.whl | head -1)
-          pip install "$WHEEL"
+          # Find and install the wheel for this Python version (cross-platform)
+          python -c "
+          import glob, sys, subprocess
+          pyver = f'cp{sys.version_info.major}{sys.version_info.minor}'
+          wheels = glob.glob(f'dist/*{pyver}*.whl')
+          if not wheels:
+              wheels = glob.glob('dist/*.whl')
+          if wheels:
+              subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheels[0]])
+          else:
+              sys.exit('No wheel found')
+          "
           python -c "import pymesh; print(f'PyMesh {pymesh.__version__} loaded')"
           pytest python/pymesh/tests -v --tb=short
-        shell: bash
 
   # Build source distribution
   build_sdist:
