@@ -1,7 +1,26 @@
-[![CircleCI](https://circleci.com/gh/PyMesh/PyMesh/tree/main.svg?style=svg)](https://circleci.com/gh/PyMesh/PyMesh/tree/main)
-[![Build Status](https://travis-ci.org/PyMesh/PyMesh.svg?branch=main)](https://travis-ci.org/PyMesh/PyMesh)
-[![Documentation Status](https://readthedocs.org/projects/pymesh/badge/?version=latest)](https://pymesh.readthedocs.io/en/latest/?badge=latest)
+## PyMesh2 - Wheel Building Fork
 
+[![Build Wheels](https://github.com/PozzettiAndrea/PyMesh/actions/workflows/build-wheels.yml/badge.svg)](https://github.com/PozzettiAndrea/PyMesh/actions/workflows/build-wheels.yml)
+
+> **This is a fork of [PyMesh/PyMesh](https://github.com/PyMesh/PyMesh) for building distributable wheels.**
+
+### Install from PyPI
+
+```bash
+pip install pymesh2
+```
+
+### What's Different
+
+This fork applies minimal patches to enable modern builds:
+
+- **Python 3.10, 3.11, 3.12** support (via pybind11 v2.11.1)
+- **Modern compilers** (GCC 10+, Clang 15+, MSVC 2022)
+- **Cross-platform wheels** (Linux, macOS ARM64, Windows)
+
+See [PATCHES.md](PATCHES.md) for complete list of changes.
+
+---
 
 ### About PyMesh ###
 

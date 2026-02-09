@@ -118,8 +118,10 @@ if(WIN32)
   set(VORPALINE_BUILD_DYNAMIC FALSE CACHE BOOL "Installed Geogram uses DLLs")
 
   # remove warning for multiply defined symbols (caused by multiple
-  # instanciations of STL templates)
-  add_definitions(/wd4251)
+  # instanciations of STL templates) - MSVC only
+  if(MSVC)
+    add_definitions(/wd4251)
+  endif()
 
   # remove all unused stuff from windows.h
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -132,13 +134,8 @@ if(WIN32)
   # we want M_PI etc...
   add_definitions(-D_USE_MATH_DEFINES)
 
-  if(NOT VORPALINE_BUILD_DYNAMIC) 
-      # If we use static library, we link with the static C++ runtime.
-      foreach(config ${CMAKE_CONFIGURATION_TYPES})
-         string(TOUPPER ${config} config)
-         string(REPLACE /MD /MT CMAKE_C_FLAGS_${config} "${CMAKE_C_FLAGS_${config}}")
-         string(REPLACE /MD /MT CMAKE_CXX_FLAGS_${config} "${CMAKE_CXX_FLAGS_${config}}")
-      endforeach()
-  endif()
+  # Note: Removed static runtime forcing (/MT) since third_party libs
+  # are built with dynamic runtime (/MD). Using consistent runtime avoids
+  # LNK2038 mismatch errors.
 
 endif()    

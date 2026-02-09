@@ -11,6 +11,18 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 make_directory(${LIBRARY_OUTPUT_PATH})
 make_directory(${EXECUTABLE_OUTPUT_PATH})
 
+# For multi-config generators (like Visual Studio), set per-config output directories
+# to avoid the Release/Debug subdirectory structure
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PROJECT_SOURCE_DIR}/python/pymesh/lib)
+endforeach()
+
 # Windows export symbols.
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 

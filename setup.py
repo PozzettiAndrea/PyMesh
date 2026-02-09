@@ -5,13 +5,22 @@ from distutils.command.build_ext import build_ext
 from distutils.command.clean import clean
 import multiprocessing
 import os
+import sys
 import os.path
 from setuptools import setup, Distribution, Extension
-from subprocess import check_call
+from subprocess import check_call, DEVNULL
 import shutil
 import platform
 
 exec(open(os.path.join('python/pymesh/version.py')).read())
+
+def ninja_available():
+    """Check if ninja is available on the system."""
+    try:
+        check_call(["ninja", "--version"], stdout=DEVNULL, stderr=DEVNULL)
+        return True
+    except (OSError, FileNotFoundError):
+        return False
 
 num_cores = multiprocessing.cpu_count()
 num_cores = max(1, num_cores)
@@ -50,22 +59,13 @@ class cmake_build(build):
         """
         Config and build third party dependencies.
         """
-        commands = [
-                "third_party/build.py cgal",
-                "third_party/build.py eigen",
-                "third_party/build.py triangle",
-                "third_party/build.py tetgen",
-                "third_party/build.py clipper",
-                "third_party/build.py qhull",
-                "third_party/build.py cork",
-                #"third_party/build.py carve",
-                "third_party/build.py draco",
-                "third_party/build.py tbb",
-                "third_party/build.py mmg",
-                "third_party/build.py json",
-                ];
-        for c in commands:
-            check_call(c.split())
+        import sys
+        packages = ["cgal", "eigen", "triangle", "tetgen", "clipper",
+                    "qhull", "cork", "draco", "tbb", "mmg", "json"]
+        for pkg in packages:
+            # Use sys.executable to ensure we call the correct Python interpreter
+            # This fixes Windows where shebangs don't work
+            check_call([sys.executable, "third_party/build.py", pkg])
 
     def build_pymesh(self):
         """
@@ -89,12 +89,30 @@ class cmake_build(build):
                 os.makedirs(build_dir)
 
             os.chdir(build_dir)
-            commands = [
-                "cmake .. -DCMAKE_BUILD_TYPE=Release" + cmake_args,
-                "cmake --build . --config Release -- -j {}".format(num_cores),
-            ] + (["cmake --build . --target install"] if want_install else [])
+            # On Windows, use Visual Studio generator (MSVC) for compatibility with vcpkg
+            # On other platforms, use Ninja if available for faster builds
+            if platform.system() == "Windows":
+                # Build command as list to handle spaces in generator name
+                configure_cmd = [
+                    "cmake", "..",
+                    "-G", "Visual Studio 17 2022",
+                    "-A", "x64",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                    "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+                ] + cmake_args.split()
+                build_cmd = ["cmake", "--build", ".", "--config", "Release", "--parallel", str(num_cores)]
+                install_cmd = ["cmake", "--build", ".", "--config", "Release", "--target", "install"]
+            else:
+                generator_flag = " -GNinja" if ninja_available() else ""
+                configure_cmd = "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}{}".format(
+                    generator_flag, sys.executable, cmake_args).split()
+                build_cmd = "cmake --build . --config Release --parallel {}".format(num_cores).split()
+                install_cmd = "cmake --build . --target install".split()
+
+            commands = [configure_cmd, build_cmd] + ([install_cmd] if want_install else [])
             for c in commands:
-                check_call(c.split())
+                check_call(c)
         finally:
             os.chdir(cwd)
 

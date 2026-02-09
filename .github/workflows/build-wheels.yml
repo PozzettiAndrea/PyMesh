@@ -1,0 +1,252 @@
+name: Build PyMesh Wheels
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheel (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        include:
+          - python: "3.9"
+            cp: "cp39"
+          - python: "3.10"
+            cp: "cp310"
+          - python: "3.11"
+            cp: "cp311"
+          - python: "3.12"
+            cp: "cp312"
+          - python: "3.13"
+            cp: "cp313"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Linux dependencies
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgmp-dev libmpfr-dev \
+            libboost-all-dev libeigen3-dev libcgal-dev swig
+
+      # macOS dependencies
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake ninja boost eigen cgal gmp mpfr swig nlohmann-json openblas tbb
+
+      # Cache third-party build output (saves 10-20 min per build)
+      - name: Cache third-party libraries
+        uses: actions/cache@v4
+        with:
+          path: python/pymesh/third_party
+          # v2: Fixed TBB cache marker to check for library, not just header
+          key: third-party-v2-${{ runner.os }}-${{ hashFiles('third_party/build.py', 'third_party/**/CMakeLists.txt') }}
+          restore-keys: |
+            third-party-v2-${{ runner.os }}-
+
+      # Windows vcpkg cache
+      - name: Restore vcpkg cache
+        if: runner.os == 'Windows'
+        id: vcpkg-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: C:\vcpkg\installed
+          key: vcpkg-windows-v2
+          restore-keys: vcpkg-windows-
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg install cgal:x64-windows boost-thread:x64-windows boost-system:x64-windows eigen3:x64-windows gmp:x64-windows mpfr:x64-windows tbb:x64-windows openblas:x64-windows
+        shell: cmd
+
+      - name: Save vcpkg cache
+        if: runner.os == 'Windows' && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: C:\vcpkg\installed
+          key: vcpkg-windows-v2
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21.3
+        env:
+          # Build for single Python version from matrix
+          CIBW_BUILD: "${{ matrix.cp }}-*"
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux* pp*"
+          CIBW_BUILD_VERBOSITY: 1
+
+          # Use oldest-supported-numpy for ABI compatibility
+          CIBW_BUILD_REQUIRES: "oldest-supported-numpy"
+
+          # Linux container setup
+          CIBW_BEFORE_ALL_LINUX: |
+            yum install -y epel-release || true
+            yum install -y cmake3 ninja-build boost-devel eigen3-devel gmp-devel mpfr-devel swig openblas-devel || \
+            (apt-get update && apt-get install -y cmake ninja-build libboost-all-dev libeigen3-dev libgmp-dev libmpfr-dev libcgal-dev swig libopenblas-dev)
+
+            # Install nlohmann_json
+            cd /tmp && curl -L https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz -o json.tar.gz
+            tar xf json.tar.gz && cd json-3.11.3 && mkdir build && cd build
+            cmake .. -GNinja -DJSON_BuildTests=OFF && ninja install
+
+            # Build CGAL from source if not available
+            if ! pkg-config --exists cgal 2>/dev/null; then
+              cd /tmp && curl -L https://github.com/CGAL/cgal/releases/download/v5.6/CGAL-5.6.tar.xz -o cgal.tar.xz
+              tar xf cgal.tar.xz && cd CGAL-5.6 && mkdir build && cd build
+              cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release && ninja -j$(nproc) && ninja install
+            fi
+
+            # Build third-party deps
+            cd {package}/third_party && python3 build.py all
+
+          CIBW_BEFORE_ALL_MACOS: |
+            echo "=== DEBUG: Starting macOS build ==="
+            echo "Package dir: {package}"
+            ls -la {package}/python/pymesh/third_party/ || echo "third_party dir doesn't exist yet"
+            cd {package}/third_party && python3 build.py all
+            echo "=== DEBUG: third_party build complete ==="
+            ls -la {package}/python/pymesh/third_party/lib/ || echo "No lib dir"
+            ls -la {package}/python/pymesh/third_party/include/ || echo "No include dir"
+
+          # Windows: third_party build runs via setup.py (not BEFORE_ALL)
+          # vcpkg provides external deps (TBB, CGAL, etc.)
+          CIBW_BEFORE_ALL_WINDOWS: "echo Windows build starting - vcpkg deps already installed"
+
+          CIBW_ENVIRONMENT: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon"
+          CIBW_ENVIRONMENT_MACOS: "PYMESH_PATH={package} CFLAGS=-fcommon CXXFLAGS=-fcommon MACOSX_DEPLOYMENT_TARGET=14.0 DYLD_LIBRARY_PATH={package}/python/pymesh/third_party/lib"
+          CIBW_ENVIRONMENT_WINDOWS: "PYMESH_PATH={package} CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake CFLAGS=-fcommon CXXFLAGS=-fcommon"
+
+          # macOS needs DYLD_LIBRARY_PATH for delocate to find third_party libs
+          # Note: {package} doesn't work here, use $PYMESH_PATH from environment
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=$PYMESH_PATH/python/pymesh/third_party/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+
+          # Test the wheel
+          CIBW_TEST_REQUIRES: numpy pytest
+          CIBW_TEST_COMMAND: |
+            python -c "import pymesh; import numpy as np; v=np.array([[0,0,0],[1,0,0],[0,1,0],[0,0,1]],dtype=float); f=np.array([[0,1,2],[0,2,3]],dtype=np.int32); m=pymesh.form_mesh(v,f); print(f'PyMesh {pymesh.__version__}: {m.num_vertices} verts, {m.num_faces} faces')"
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+
+  # Full test suite
+  test:
+    needs: build_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout (for tests)
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python }}
+          path: dist/
+
+      - name: Install wheel and run tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pytest
+          # Find and install the wheel for this Python version (cross-platform)
+          python -c "
+          import glob, sys, subprocess
+          pyver = f'cp{sys.version_info.major}{sys.version_info.minor}'
+          wheels = glob.glob(f'dist/*{pyver}*.whl')
+          if not wheels:
+              wheels = glob.glob('dist/*.whl')
+          if wheels:
+              subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheels[0]])
+          else:
+              sys.exit('No wheel found')
+          "
+          python -c "import pymesh; print(f'PyMesh {pymesh.__version__} loaded')"
+          pytest python/pymesh/tests -v --tb=short
+
+  # Build source distribution
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # Publish on tag
+  publish:
+    needs: [build_wheels, build_sdist, test]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write      # For GitHub release
+      id-token: write      # For PyPI trusted publishing
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist/
+
+      - name: List wheels
+        run: ls -la dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.whl
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Uses trusted publishing - no token needed!
+          # Configure at: https://pypi.org/manage/project/pymesh2/settings/publishing/
+          packages-dir: dist/
+          skip-existing: true  # Don't fail if version exists
