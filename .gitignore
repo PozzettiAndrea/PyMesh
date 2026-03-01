@@ -26,3 +26,6 @@ third_party/build/
 third_party/local/
 cmake/SetInstallRpath.cmake
 cmake/PythonPrefix.cmake
+.pixi/
+pixi.toml
+pixi.lock

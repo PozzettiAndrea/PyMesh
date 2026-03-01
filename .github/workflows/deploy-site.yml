@@ -1,0 +1,67 @@
+name: Deploy demo site
+
+on:
+  workflow_run:
+    workflows: ["Build & Publish"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & deploy site
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgmp-dev libmpfr-dev \
+            libboost-all-dev swig xvfb libgl1-mesa-dev libopenblas-dev
+
+      - name: Build and install PyMesh
+        env:
+          CFLAGS: "-fcommon"
+          CXXFLAGS: "-fcommon"
+        run: |
+          pip install numpy setuptools wheel
+          python setup.py build
+          python setup.py install
+
+      - name: Install rendering deps
+        run: pip install pyvista vtk Pillow
+
+      - name: Generate demo
+        run: xvfb-run -a python docs/generate_demo.py
+
+      - name: Include PEP 503 simple index
+        run: cp -r simple docs/_site/simple
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
