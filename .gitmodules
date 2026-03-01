@@ -20,7 +20,7 @@
 	shallow = true
 [submodule "third_party/eigen"]
 	path = third_party/eigen
-	url = https://github.com/eigenteam/eigen-git-mirror
+	url = https://github.com/eigen-mirror/eigen.git
 	shallow = false
 [submodule "third_party/quartet"]
 	path = third_party/quartet
