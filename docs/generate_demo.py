@@ -369,6 +369,21 @@ def main():
 
     # ── Generate HTML ──────────────────────────────────────────────
     generate_html(sections)
+
+    # Preview image for README (first boolean before/after side by side)
+    try:
+        from PIL import Image
+        d = bool_demos[0]
+        before = Image.open(os.path.join(OUT_DIR, f"{d['name']}_before.png"))
+        after = Image.open(os.path.join(OUT_DIR, f"{d['name']}_after.png"))
+        w, h = before.size
+        grid = Image.new("RGB", (w * 2, h), "#0d1117")
+        grid.paste(before, (0, 0))
+        grid.paste(after, (w, 0))
+        grid.save(os.path.join(OUT_DIR, "preview.png"))
+    except Exception as e:
+        print(f"Skipping preview: {e}")
+
     print(f"Demo site generated in {OUT_DIR}/")
 
 
