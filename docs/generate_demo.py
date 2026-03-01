@@ -40,8 +40,9 @@ def pv_from_pymesh(mesh):
 def render_mesh(mesh, filename, title, color=MESH_COLOR_IN,
                 window_size=(800, 600)):
     pl = pv.Plotter(off_screen=True, window_size=window_size)
-    pl.add_mesh(mesh, color=color, show_edges=True, edge_color=EDGE_COLOR,
-                line_width=0.5, lighting=True, smooth_shading=True)
+    if mesh.n_points > 0:
+        pl.add_mesh(mesh, color=color, show_edges=True, edge_color=EDGE_COLOR,
+                    line_width=0.5, lighting=True, smooth_shading=True)
     pl.add_text(title, position="upper_left", font_size=12, color=TEXT_COLOR)
     pl.set_background(BG_COLOR)
     pl.camera_position = "iso"
