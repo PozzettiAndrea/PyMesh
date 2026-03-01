@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "python/pymesh/tests/**"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "python/pymesh/tests/**"
+      - ".github/workflows/test.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (ubuntu cp312)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install latest wheel from releases
+        run: |
+          gh release download --pattern '*cp312-cp312-manylinux*x86_64*.whl' --dir wheelhouse || \
+          gh release download --pattern '*cp312*linux*.whl' --dir wheelhouse
+          pip install wheelhouse/*.whl
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run tests
+        run: |
+          pip install pytest numpy scipy
+          # Copy tests to /tmp so local source tree doesn't shadow installed wheel
+          cp -r python/pymesh/tests /tmp/pymesh_tests
+          cd /tmp && python -m pytest pymesh_tests/ -v --tb=short

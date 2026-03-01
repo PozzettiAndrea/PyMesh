@@ -9,6 +9,7 @@ on:
     paths:
       - "src/**"
       - "python/**"
+      - "!python/pymesh/tests/**"
       - "tools/**"
       - "third_party/**"
       - "setup.py"
@@ -18,6 +19,7 @@ on:
     paths:
       - "src/**"
       - "python/**"
+      - "!python/pymesh/tests/**"
       - "tools/**"
       - "third_party/**"
       - "setup.py"
