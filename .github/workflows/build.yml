@@ -162,9 +162,9 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
-  # ── Tests ────────────────────────────────────────────────────────
+  # ── Tests & demo renders ─────────────────────────────────────────
   test:
-    name: Test (ubuntu cp312)
+    name: Test & render (ubuntu cp312)
     needs: build_wheels
     runs-on: ubuntu-24.04
     steps:
@@ -186,6 +186,18 @@ jobs:
           # Copy tests to /tmp so local source tree doesn't shadow installed wheel
           cp -r python/pymesh/tests /tmp/pymesh_tests
           cd /tmp && python -m pytest pymesh_tests/ -v --tb=short
+
+      - name: Generate demo renders
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install pyvista vtk Pillow
+          sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dev
+          xvfb-run -a python docs/generate_demo.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-site
+          path: docs/_site
 
   # ── Release (only after tests pass) ─────────────────────────────
   release:

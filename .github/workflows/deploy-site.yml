@@ -13,13 +13,14 @@ concurrency:
 
 jobs:
   deploy:
-    name: Build & deploy site
+    name: Deploy site
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       pages: write
       id-token: write
+      actions: read
 
     environment:
       name: github-pages
@@ -27,33 +28,33 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
+      # workflow_run: download pre-rendered site from build workflow
+      - name: Download demo renders from build
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/download-artifact@v4
+        with:
+          name: demo-site
+          path: docs/_site
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      # workflow_dispatch fallback: generate renders from latest release
       - uses: actions/setup-python@v5
+        if: github.event_name == 'workflow_dispatch'
         with:
           python-version: "3.12"
 
-      - name: Install system dependencies
+      - name: Generate renders from release wheel
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libgmp-dev libmpfr-dev \
-            libboost-all-dev swig xvfb libgl1-mesa-dev libopenblas-dev
-
-      - name: Build and install PyMesh
+          gh release download --pattern '*cp312*manylinux*x86_64*.whl' --dir wheelhouse
+          pip install wheelhouse/*.whl
+          pip install pyvista vtk Pillow numpy
+          sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dev
+          xvfb-run -a python docs/generate_demo.py
         env:
-          CFLAGS: "-fcommon"
-          CXXFLAGS: "-fcommon"
-        run: |
-          pip install numpy setuptools wheel
-          python setup.py build
-          python setup.py install
-
-      - name: Install rendering deps
-        run: pip install pyvista vtk Pillow
-
-      - name: Generate demo
-        run: xvfb-run -a python docs/generate_demo.py
+          GH_TOKEN: ${{ github.token }}
 
       - name: Include PEP 503 simple index
         run: cp -r simple docs/_site/simple
