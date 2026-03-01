@@ -12,7 +12,7 @@ import shutil
 import sys
 
 def get_third_party_dependencies():
-    return ["cgal", "cork", "eigen",
+    return ["cgal", "eigen",
         "tetgen", "triangle", "qhull", "clipper", "draco",
         "tbb", "mmg", "json"]
 
@@ -43,7 +43,6 @@ def is_already_built(libname):
     # Check for marker files indicating successful build
     markers = {
         "cgal": "include/CGAL/version.h",
-        "cork": "lib/libcork.a",
         "eigen": "include/eigen3/Eigen/Core",
         "tetgen": "lib/libtet.a",
         "triangle": "lib/libtriangle.a",
@@ -101,6 +100,8 @@ def build_generic(libname, build_flags="", cleanup=True):
             "-DBUILD_SHARED_LIBS=Off",
             "-DCMAKE_POSITION_INDEPENDENT_CODE=On",
             "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+            "-DCMAKE_C_FLAGS=-fcommon",
+            "-DCMAKE_CXX_FLAGS=-fcommon",
             "-DCMAKE_INSTALL_PREFIX={}".format(install_prefix),
         ] + (build_flags.split() if build_flags else [])
 

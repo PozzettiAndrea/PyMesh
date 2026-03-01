@@ -61,7 +61,7 @@ class cmake_build(build):
         """
         import sys
         packages = ["cgal", "eigen", "triangle", "tetgen", "clipper",
-                    "qhull", "cork", "draco", "tbb", "mmg", "json"]
+                    "qhull", "draco", "tbb", "mmg", "json"]
         for pkg in packages:
             # Use sys.executable to ensure we call the correct Python interpreter
             # This fixes Windows where shebangs don't work
@@ -104,11 +104,18 @@ class cmake_build(build):
                 build_cmd = ["cmake", "--build", ".", "--config", "Release", "--parallel", str(num_cores)]
                 install_cmd = ["cmake", "--build", ".", "--config", "Release", "--target", "install"]
             else:
-                generator_flag = " -GNinja" if ninja_available() else ""
-                configure_cmd = "cmake ..{} -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPYTHON_EXECUTABLE={}{}".format(
-                    generator_flag, sys.executable, cmake_args).split()
-                build_cmd = "cmake --build . --config Release --parallel {}".format(num_cores).split()
-                install_cmd = "cmake --build . --target install".split()
+                configure_cmd = ["cmake", ".."]
+                if ninja_available():
+                    configure_cmd += ["-GNinja"]
+                configure_cmd += [
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                    "-DCMAKE_C_FLAGS=-fcommon",
+                    "-DCMAKE_CXX_FLAGS=-fcommon",
+                    "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+                ] + cmake_args.split()
+                build_cmd = ["cmake", "--build", ".", "--config", "Release", "--parallel", str(num_cores)]
+                install_cmd = ["cmake", "--build", ".", "--target", "install"]
 
             commands = [configure_cmd, build_cmd] + ([install_cmd] if want_install else [])
             for c in commands:
