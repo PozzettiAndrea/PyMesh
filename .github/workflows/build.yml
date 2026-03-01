@@ -164,8 +164,10 @@ jobs:
       - name: Install and test
         run: |
           pip install wheelhouse/*.whl
-          pip install pytest numpy
-          pytest python/pymesh/tests/ -v --tb=short
+          pip install pytest numpy scipy
+          # Copy tests to /tmp so local source tree doesn't shadow installed wheel
+          cp -r python/pymesh/tests /tmp/pymesh_tests
+          cd /tmp && python -m pytest pymesh_tests/ -v --tb=short
 
   # ── Release (only after tests pass) ─────────────────────────────
   release:
