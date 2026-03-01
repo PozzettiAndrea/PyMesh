@@ -6,7 +6,23 @@ on:
       - "v*"
     branches:
       - main
+    paths:
+      - "src/**"
+      - "python/**"
+      - "tools/**"
+      - "third_party/**"
+      - "setup.py"
+      - "CMakeLists.txt"
+      - ".github/workflows/build.yml"
   pull_request:
+    paths:
+      - "src/**"
+      - "python/**"
+      - "tools/**"
+      - "third_party/**"
+      - "setup.py"
+      - "CMakeLists.txt"
+      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 concurrency:
